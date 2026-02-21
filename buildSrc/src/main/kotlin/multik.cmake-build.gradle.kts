@@ -3,9 +3,9 @@ import org.jetbrains.kotlinx.multik.builds.HostDetection
 val cmakePath = "${rootDir}/multik-openblas/multik_jni"
 val cmakeBuildDir = layout.buildDirectory.dir("cmake-build").map { it.asFile.absolutePath }
 
-val cmakeCCompiler = System.getenv("CMAKE_C_COMPILER") ?: "gcc-15"
-val cmakeCxxCompiler = System.getenv("CMAKE_CXX_COMPILER") ?: "g++-15"
-val gccLibPath = System.getenv("GCC_LIB_Path") ?: "/opt/homebrew/Cellar/gcc/15.2.0_1/lib/gcc/current"
+val cmakeCCompiler = System.getenv("CMAKE_C_COMPILER") ?: ""
+val cmakeCxxCompiler = System.getenv("CMAKE_CXX_COMPILER") ?: ""
+val gccLibPath = System.getenv("GCC_LIB_Path") ?: ""
 val targetOS = HostDetection.targetOSForCMake
 
 val createBuildDir by tasks.registering {
