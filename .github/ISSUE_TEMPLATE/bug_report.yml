@@ -27,7 +27,7 @@ body:
         - multik-openblas
         - multik-core
     validations:
-      required: true
+      required: false
 
   - type: dropdown
     id: platform
@@ -39,10 +39,21 @@ body:
         - JS
         - Kotlin/Native
         - WASM
+    validations:
+      required: false
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - macOS
+        - Windows
+        - Linux
         - Android
         - iOS
     validations:
-      required: true
+      required: false
 
   - type: textarea
     id: description
@@ -62,13 +73,13 @@ body:
       description: Minimal code to reproduce the issue.
       render: kotlin
     validations:
-      required: true
+      required: false
 
   - type: textarea
-    id: stacktrace
+    id: additional_info
     attributes:
-      label: Stack trace or error output
-      description: Paste the full error message if applicable.
+      label: Additional information
+      description: Add any extra details, logs, stack traces, screenshots, or context that may help.
       render: text
     validations:
       required: false

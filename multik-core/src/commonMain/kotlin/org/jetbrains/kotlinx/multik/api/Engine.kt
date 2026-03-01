@@ -1,46 +1,43 @@
-/*
- * Copyright 2020-2022 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license.
- */
-
 package org.jetbrains.kotlinx.multik.api
 
 import org.jetbrains.kotlinx.multik.api.linalg.LinAlg
 import org.jetbrains.kotlinx.multik.api.math.Math
 import org.jetbrains.kotlinx.multik.api.stat.Statistics
+import kotlin.concurrent.Volatile
 
 /**
- * Type engine implementations.
+ * Sealed hierarchy of engine types identifying available computational backends.
  *
- * @param name engine type name
+ * @param name the engine type name (e.g., "DEFAULT", "KOTLIN", "NATIVE").
  */
 public sealed class EngineType(public val name: String)
 
-/**
- * Engine type for default implementation.
- */
+/** Engine type for the default implementation that picks the best available backend. */
 public object DefaultEngineType : EngineType("DEFAULT")
 
-/**
- * Engine type for "pure kotlin" implementation.
- */
+/** Engine type for the pure Kotlin implementation (all platforms). */
 public object KEEngineType : EngineType("KOTLIN")
 
-/**
- * Engine type for implementation with OpenBLAS.
- */
+/** Engine type for the OpenBLAS-based native implementation (JVM + desktop Native only). */
 public object NativeEngineType : EngineType("NATIVE")
 
 /**
- * Engine provider.
+ * Platform-specific function that discovers and returns available [Engine] implementations.
+ *
+ * On JVM uses `ServiceLoader`, on Native uses `@EagerInitialization`, on JS/WASM uses module-level registration.
  */
 public expect fun enginesProvider(): Map<EngineType, Engine>
 
 /**
- * This class gives access to different implementations of [LinAlg], [Math], [Statistics].
- * When initializing [Multik], it loads engines, by default `DEFAULT` implementation is used.
+ * Abstract base class for computational backends providing [Math], [LinAlg], and [Statistics] implementations.
  *
- * @property name engine name
- * @property type [EngineType]
+ * Engines are loaded automatically when [Multik] is first used. The default engine is `DEFAULT`
+ * (which delegates to `NativeEngine` when available, falling back to `KEEngine`).
+ * Use [Multik.setEngine] to switch engines at runtime.
+ *
+ * @property name the engine name.
+ * @property type the [EngineType] identifying this engine.
+ * @see [Multik] for the main entry point.
  */
 public abstract class Engine {
 
@@ -48,32 +45,31 @@ public abstract class Engine {
 
     public abstract val type: EngineType
 
-    /**
-     * Returns [Math] implementation.
-     */
+    /** Returns the [Math] implementation provided by this engine. */
     public abstract fun getMath(): Math
 
-    /**
-     * Returns [LinAlg] implementation.
-     */
+    /** Returns the [LinAlg] implementation provided by this engine. */
     public abstract fun getLinAlg(): LinAlg
 
-    /**
-     * Returns [Statistics] implementation.
-     */
+    /** Returns the [Statistics] implementation provided by this engine. */
     public abstract fun getStatistics(): Statistics
 
     internal companion object : Engine() {
 
         private val enginesProvider: Map<EngineType, Engine> = enginesProvider()
 
-        public var defaultEngine: EngineType? = null
+        @Volatile
+        private var defaultEngine: EngineType? = null
 
-        public fun loadEngine() {
-            defaultEngine = when {
+        fun loadEngine() {
+            if (defaultEngine != null) return
+            val resolved: EngineType? = when {
                 enginesProvider.containsKey(DefaultEngineType) -> DefaultEngineType
                 enginesProvider.isNotEmpty() -> enginesProvider.iterator().next().key
                 else -> null
+            }
+            if (defaultEngine == null) {
+                defaultEngine = resolved
             }
         }
 
@@ -83,7 +79,14 @@ public abstract class Engine {
         override val type: EngineType
             get() = throw EngineMultikException("For a companion object, the type is undefined.")
 
-        internal fun getDefaultEngine(): String? = defaultEngine?.name ?: loadEngine().let { defaultEngine?.name }
+        internal fun getDefaultEngine(): String? {
+            var engine = defaultEngine
+            if (engine == null) {
+                loadEngine()
+                engine = defaultEngine
+            }
+            return engine?.name
+        }
 
         internal fun setDefaultEngine(type: EngineType) {
             if (!enginesProvider.containsKey(type)) throw EngineMultikException("This type of engine is not available.")
@@ -92,27 +95,43 @@ public abstract class Engine {
 
         override fun getMath(): Math {
             if (enginesProvider.isEmpty()) throw EngineMultikException("The map of engines is empty. Can not provide Math implementation.")
-            if (defaultEngine == null) loadEngine()
-            return enginesProvider[defaultEngine]?.getMath()
+            var engine = defaultEngine
+            if (engine == null) {
+                loadEngine()
+                engine = defaultEngine
+            }
+            return enginesProvider[engine]?.getMath()
                 ?: throw EngineMultikException("The used engine type is not defined.")
         }
 
         override fun getLinAlg(): LinAlg {
             if (enginesProvider.isEmpty()) throw EngineMultikException("The map of engines is empty. Can not provide LinAlg implementation.")
-            if (defaultEngine == null) loadEngine()
-            return enginesProvider[defaultEngine]?.getLinAlg()
+            var engine = defaultEngine
+            if (engine == null) {
+                loadEngine()
+                engine = defaultEngine
+            }
+            return enginesProvider[engine]?.getLinAlg()
                 ?: throw EngineMultikException("The used engine type is not defined.")
         }
 
         override fun getStatistics(): Statistics {
             if (enginesProvider.isEmpty()) throw EngineMultikException("The map of engines is empty. Can not provide Statistics implementation.")
-            if (defaultEngine == null) loadEngine()
-            return enginesProvider[defaultEngine]?.getStatistics()
+            var engine = defaultEngine
+            if (engine == null) {
+                loadEngine()
+                engine = defaultEngine
+            }
+            return enginesProvider[engine]?.getStatistics()
                 ?: throw EngineMultikException("The used engine type is not defined.")
         }
     }
 }
 
+/**
+ * Exception thrown when an engine operation fails — e.g., no engine is available
+ * or the requested engine type is not registered.
+ */
 public class EngineMultikException(message: String) : Exception(message) {
     public constructor() : this("")
 }

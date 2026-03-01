@@ -1,8 +1,5 @@
-/*
- * Copyright 2020-2022 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license.
- */
-
 package org.jetbrains.kotlinx.multik.api
+
 import kotlin.concurrent.AtomicReference
 
 /**
@@ -11,7 +8,9 @@ import kotlin.concurrent.AtomicReference
 public actual fun enginesProvider(): Map<EngineType, Engine> = engines.value
 
 /**
- * Saves and initialize engine.
+ * Thread-safe registry where Native engine factories store their [Engine] instances during initialization.
+ *
+ * Engines register themselves via `@EagerInitialization` objects. [enginesProvider] returns the current snapshot.
  */
 public val engines: AtomicReference<MutableMap<EngineType, Engine>> by lazy {
     AtomicReference(mutableMapOf())
