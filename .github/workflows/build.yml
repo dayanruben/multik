@@ -44,7 +44,7 @@ jobs:
           java-version: '21'
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       # ── Full build (openblas changed or manual trigger) ──
 
@@ -92,7 +92,7 @@ jobs:
 
       - name: Test report
         if: always()
-        uses: mikepenz/action-junit-report@v5
+        uses: mikepenz/action-junit-report@v6
         with:
           report_paths: '**/build/test-results/**/TEST-*.xml'
 
