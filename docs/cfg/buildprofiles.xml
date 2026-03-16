@@ -27,7 +27,7 @@
         <analytics-body-html-file>google-analytics-body.html</analytics-body-html-file>
 
         <algolia-id>7961PKYRXV</algolia-id>
-        <algolia-index>prod_MULTIK_HELP</algolia-index>
+        <algolia-index>multik</algolia-index>
         <algolia-api-key>c281e6fa402631930df5a4d5baf863c5</algolia-api-key>
     </variables>
 
