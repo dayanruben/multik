@@ -17,12 +17,18 @@ permissions:
 env:
   INSTANCE: 'docs/mk'
   DOCKER_VERSION: '2026.02.8644'
+  ALGOLIA_APP_NAME: 7961PKYRXV
+  ALGOLIA_INDEX_NAME: multik
+  ALGOLIA_KEY: ${{ secrets.ALGOLIA_KEY }}
+  CONFIG_JSON_PRODUCT: 'mk'
+  CONFIG_JSON_VERSION: '0.3.0' # no multi-version docs
 
 jobs:
   build:
     runs-on: ubuntu-latest
     outputs:
       artifact: ${{ steps.define-ids.outputs.artifact }}
+      algolia_artifact: ${{ steps.define-ids.outputs.algolia_artifact }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -35,9 +41,12 @@ jobs:
           INSTANCE=${INSTANCE#*/}
           INSTANCE_ID_UPPER=$(echo "$INSTANCE" | tr '[:lower:]' '[:upper:]')
           ARTIFACT="webHelp${INSTANCE_ID_UPPER}2-all.zip"
+          ALGOLIA_ARTIFACT="algolia-indexes-${INSTANCE_ID_UPPER}.zip"
           echo "INSTANCE_ID_UPPER=$INSTANCE_ID_UPPER" >> $GITHUB_ENV
           echo "ARTIFACT=$ARTIFACT" >> $GITHUB_ENV
+          echo "ALGOLIA_ARTIFACT=$ALGOLIA_ARTIFACT" >> $GITHUB_ENV
           echo "artifact=$ARTIFACT" >> $GITHUB_OUTPUT
+          echo "algolia_artifact=$ALGOLIA_ARTIFACT" >> $GITHUB_OUTPUT
 
       - name: Build docs using Writerside Docker builder
         uses: JetBrains/writerside-github-action@v4
@@ -52,6 +61,7 @@ jobs:
           path: |
             artifacts/${{ steps.define-ids.outputs.artifact }}
             artifacts/report.json
+            artifacts/${{ steps.define-ids.outputs.algolia_artifact }}
           retention-days: 7
 
   test:
@@ -96,3 +106,29 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  publish-indexes:
+    needs: [build, test, deploy]
+    runs-on: ubuntu-latest
+    container:
+      image: registry.jetbrains.team/p/writerside/builder/algolia-publisher:2.0.32-3
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: docs
+          path: artifacts
+
+      - name: Unzip Algolia artifact
+        run: unzip -O UTF-8 -qq "artifacts/${{ needs.build.outputs.algolia_artifact }}" -d algolia-indexes
+
+      - name: Update Algolia index
+        run: |
+          env "algolia-key=${{ env.ALGOLIA_KEY }}" java -jar /opt/builder/help-publication-agent.jar \
+          update-index \
+          --application-name ${{ env.ALGOLIA_APP_NAME }} \
+          --index-name ${{ env.ALGOLIA_INDEX_NAME }} \
+          --product ${{ env.CONFIG_JSON_PRODUCT }} \
+          --version ${{ env.CONFIG_JSON_VERSION }} \
+          --index-directory algolia-indexes/ \
+          2>&1 | tee algolia-update-index-log.txt
