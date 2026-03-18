@@ -28,7 +28,7 @@
 
         <algolia-id>7961PKYRXV</algolia-id>
         <algolia-index>multik</algolia-index>
-        <algolia-api-key>c281e6fa402631930df5a4d5baf863c5</algolia-api-key>
+        <algolia-api-key>f066feea8ebd659ae26c1a2f1ac4760a</algolia-api-key>
     </variables>
 
     <llms-txt/>
