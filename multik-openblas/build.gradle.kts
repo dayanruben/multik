@@ -34,10 +34,6 @@ kotlin {
                 into("lib/macosArm64")
             }
             from("$projectDir/build/libs") {
-                include("libmultik_jni-macosX64.dylib")
-                into("lib/macosX64")
-            }
-            from("$projectDir/build/libs") {
                 include("libmultik_jni-mingwX64.dll")
                 into("lib/mingwX64")
             }
@@ -64,6 +60,8 @@ kotlin {
                     if (konanTarget.family == LINUX) {
                         compilerOpts("-DFORCE_OPENBLAS_COMPLEX_STRUCT=1")
                     }
+
+                    extraOpts("-Xccall-mode", "indirect")
 
                     extraOpts("-Xsource-compiler-option", "-std=c++14")
                     extraOpts("-Xsource-compiler-option", "-I$headersDir")
